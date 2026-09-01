@@ -216,3 +216,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+agent/sanpoyoshi_guardian/.adk/ 
+test_gemini.py

@@ -6,6 +6,7 @@
 > **Elevator Pitch**
 > 規格外食材の出品をAIが自律的に検知し、近隣の子ども食堂への最適な分配から、支援者向けの透明性の高い会計・監査レポートまでを自動生成するプラットフォームです。
 
+🚀 **[稼働中のデモ（職員向け承認ダッシュボード）](https://sanpoyoshi-guardian-dashboard-e3sjywoowa-an.a.run.app)**
 🎥 **[デモ動画のURLをここに記載]**
 
 ## 課題
@@ -22,35 +23,58 @@ Metaマルシェへの規格外食材の出品をエージェントが自律的�
 ![システムアーキテクチャ図](docs/architecture.png)
 
 ## 技術スタック
-- **Google Cloud Run:** エージェントおよびAPIのコンテナホスティング
+- **Google Cloud Run:** 職員向け承認ダッシュボード（Streamlit）のホスティング
 - **Agent Development Kit（ADK）:** 監視・推論・起案を行う自律型エージェントのオーケストレーション
-- **Gemini API (Gemini Enterprise Agent Platform):** 非構造化データの解釈、最適な分配ルートの推論、監査レポートの生成
-- **Cloud Firestore:** マッチングデータおよび承認ステータス（ハッシュチェーン）のリアルタイム同期・保存
+- **Gemini API（Vertex AI経由）:** 非構造化データの解釈、最適な分配案の推論、監査レポートの生成
+- **Cloud Firestore:** マッチングデータ・承認ステータス・ハッシュチェーン台帳のリアルタイム同期・保存
+- **Streamlit:** 職員向け承認ダッシュボードのUI
 
 ## ローカル起動手順
 ```bash
 git clone https://github.com/SunVerdir/sanpoyoshi-guardian.git
 cd sanpoyoshi-guardian
+python -m venv venv
+venv\Scripts\activate.bat
 pip install -r requirements.txt
-
-# 環境変数の設定 (GEMINI_API_KEY, PROJECT_ID等を設定してください)
-cp .env.example .env
-
-# エージェントの起動
-adk run root_agent
 ```
+
+Firestoreエミュレータを別ターミナルで起動します（ローカル動作確認用）。
+```bash
+gcloud emulators firestore start --host-port=localhost:8080
+```
+
+別ターミナルでエミュレータ接続用の環境変数をセットしてから、エージェントを起動します。
+```bash
+set FIRESTORE_EMULATOR_HOST=localhost:8080
+cd agent
+adk web
+```
+ブラウザで http://127.0.0.1:8000 を開くと、エージェントとの対話を確認できます。
+
+さらに別ターミナルで承認ダッシュボードを起動します。
+```bash
+set FIRESTORE_EMULATOR_HOST=localhost:8080
+streamlit run dashboard\app.py
+```
+ブラウザで http://localhost:8501 を開くと、承認待ちキューの確認・承認ができます。
 
 ## Cloud Runへのデプロイ
 ```bash
-adk deploy cloud_run --project=<PROJECT_ID> --region=asia-northeast1
+gcloud run deploy sanpoyoshi-guardian-dashboard --source . --region asia-northeast1 --allow-unauthenticated
+```
+
+初回デプロイ時は、本番用Firestoreデータベースの作成も必要です。
+```bash
+gcloud firestore databases create --location=asia-northeast1 --project=<PROJECT_ID>
 ```
 
 ## ディレクトリ構成
 ```
 .
-├── agent/           # ADKエージェント本体・ツール定義（監視・起案ロジック）
-├── dashboard/       # 職員用承認ダッシュボード（フロントエンド）
-├── firestore/       # データモデル定義・セキュリティルール（ハッシュチェーン実装）
+├── agent/           # ADKエージェント本体（ツール定義・監視・起案ロジック）
+├── dashboard/       # 職員用承認ダッシュボード（Streamlit）
+├── firestore/       # データモデル定義・ハッシュチェーン台帳実装
+├── tests/           # 単体テスト
 └── docs/            # アーキテクチャ図・スクリーンショット等
 ```
 

@@ -1,7 +1,3 @@
-import os
-
-os.environ.setdefault("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-
 from google.cloud import firestore
 
 _db = None
